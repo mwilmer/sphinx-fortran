@@ -240,7 +240,7 @@ class F90toRst(object):
         # - variables with description
         for block in list(self.types.values())+list(self.modules.values())+list(self.routines.values()):
             #sreg = r'\b(?P<varname>%s)\b[\W\d]*!\s*(?P<vardesc>.*)'%'|'.join(block['sortvars'])
-            sreg = r'[\W\(\),\b\*=\-\&]*?:?:[ \t\&]*(?P<varname>%s)\b[\w\s\(\)\*,_=]*!\s*(?P<vardesc>.*)'%'|'.join(block['sortvars'])
+            sreg = r'[\W\(\),\b\*=\-\&]*?:?:[ \t\&]*(?P<varname>%s)\b[\w\s\(\)\*,_=\.]*!\s*(?P<vardesc>.*)'%'|'.join(block['sortvars'])
             if block['sortvars']:
                 block['vardescsearch'] = re.compile(sreg, re.I).search
             else:
