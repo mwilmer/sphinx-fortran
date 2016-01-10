@@ -35,6 +35,12 @@
 # The fact that you are presently reading this means that you have had
 # knowledge of the CeCILL license and that you accept its terms.
 #
+
+# Imports for Py3/2 compatibility
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from builtins import str, open, range, dict
+
 from sphinx.directives import Directive
 from docutils.parsers.rst.directives import unchanged
 from docutils import nodes
@@ -43,7 +49,7 @@ from sphinx.util.console import bold
 from glob import glob
 from numpy.f2py.crackfortran import crackfortran, fortrantypes
 import re, os, sys
-from fortran_domain import FortranDomain
+from sphinxfortran.fortran_domain import FortranDomain
 
 
 # Fortran parser and formatter
@@ -93,13 +99,8 @@ class F90toRst(object):
         for ff in ffiles:
             f = open(ff)
             self.src[ff] = []
-            for l in f.readlines():
-                try:
-                    self.src[ff].append(l[:-1].decode(encoding) )
-                except:
-                    raise F90toRstException('Encoding error\n  file = %s\n  line = %s'%(ff,l))
-            #self.src[ff] = [l.decode(encoding) for l in f.readlines()]
-            #self.src[ff] = [l.decode(encoding) for l in f.read().split('\n')]
+            for l in f:
+                    self.src[ff].append(l[:-1]
 
             f.close()
 
@@ -226,8 +227,7 @@ class F90toRst(object):
             sreg = r'[\w\*\-:]*(?:@param\w*)?(?P<varname>\b%s\b)\W+(?P<vardesc>.*)'%vars
             block['vardescmatch'] = re.compile(sreg).match
         # - variables with description
-#        for block in self.types.values()+self.modules.values():
-        for block in self.types.values()+self.modules.values()+self.routines.values():
+        for block in list(self.types.values())+list(self.modules.values())+list(self.routines.values()):
             #sreg = r'\b(?P<varname>%s)\b[\W\d]*!\s*(?P<vardesc>.*)'%'|'.join(block['sortvars'])
             sreg = r'[\W\(\),\b\*=\-\&]*?:?:[ \t\&]*(?P<varname>%s)\b[\w\s\(\)\*,_=]*!\s*(?P<vardesc>.*)'%'|'.join(block['sortvars'])
             if block['sortvars']:
@@ -240,7 +240,7 @@ class F90toRst(object):
         """For each function, index which function call it"""
         for bfunc in self.routines.values():
             bfunc['callfrom'] = []
-            for bfuncall in self.routines.values()+self.programs.values():
+            for bfuncall in list(self.routines.values())+list(self.programs.values()):
                 if bfunc['name'] in bfuncall['callto']:
                     bfunc['callfrom'].append(bfuncall['name'])
 
@@ -439,7 +439,7 @@ class F90toRst(object):
             stopmatch = re.compile(stopmatch).match
 
         # Beginning
-        for ifirst in xrange(istart, len(src)):
+        for ifirst in range(istart, len(src)):
             # Simple stop on match
             if stopmatch and stopmatch(src[ifirst]): return
             # Ok, now check
@@ -448,7 +448,7 @@ class F90toRst(object):
             return
 
         # End
-        for ilast in xrange(ifirst, len(src)):
+        for ilast in range(ifirst, len(src)):
             if stopmatch and stopmatch(src[ilast]): break
             if rend(src[ilast].lower()): break
 
@@ -511,7 +511,7 @@ class F90toRst(object):
         scomment = []
         in_a_breaked_line = False
         if src is not None:
-            for iline in xrange(iline, len(src)):
+            for iline in range(iline, len(src)):
                 line = src[iline].strip()
 
                 # Breaked line
@@ -627,7 +627,8 @@ class F90toRst(object):
         bullet = (str(bullet)+' ') if bullet else ''
 
         # Get current indentation for reduction
-        if isinstance(lines, basestring): lines = [lines]
+        print(type(lines))
+        if isinstance(lines, str): lines = [lines]
 
         # Split lines
         tmp = []
@@ -758,7 +759,7 @@ class F90toRst(object):
             return ':f:func:`%(fname)s`'%locals()
 
         # Remote reference
-        from fortran_domain import f_sep
+        from sphinxfortran.fortran_domain import f_sep
         if falias:
             ':f:func:`%(falias)s<~%(module)s%(f_sep)s%(fname)s>`'%locals()
         return ':f:func:`~%(module)s%(f_sep)s%(fname)s`'%locals()
@@ -988,8 +989,8 @@ class F90toRst(object):
     def format_routine(self, block, indent=0):
         """Format the description of a function, a subroutine or a program"""
         # Declaration of a subroutine or function
-        if isinstance(block, basestring):
-            if block not in self.programs.keys()+self.routines.keys():
+        if isinstance(block, str):
+            if block not in list(self.programs.keys())+list(self.routines.keys()):
                 raise F90toRstException('Unknown function, subroutine or program: %s'%block)
             if block in self.programs:
                 block = self.programs[block]
@@ -1009,7 +1010,7 @@ class F90toRst(object):
         comments = list(block['desc'])+['']
         if blocktype!='program' :
             found = []
-            for iline in xrange(len(comments)):
+            for iline in range(len(comments)):
                 if 'vardescmatch' in block:
                     m = block['vardescmatch'](comments[iline])
                     if m:
@@ -1035,7 +1036,7 @@ class F90toRst(object):
         if blocktype in ['function', 'subroutine']:
             if 'callfrom' in block and block['callfrom']:
                 callfrom = []
-                
+
                 for fromname in block['callfrom']:
                     if fromname in self.routines:
                         cf = self.format_funcref(fromname, module)
@@ -1063,7 +1064,7 @@ class F90toRst(object):
 
     def format_quickaccess(self, module, indent=indent):
         """Format an abstract of all types, variables and routines of a module"""
-        if not isinstance(module, basestring): module = module['name']
+        if not isinstance(module, str): module = module['name']
 
         # Title
         title = self.format_subsection('Quick access', indent=indent)+'\n'
@@ -1136,7 +1137,7 @@ class F90toRst(object):
         """Recursively format a module and its declarations"""
 
         # Declaration of the module
-        if isinstance(block, basestring):
+        if isinstance(block, str):
             if block not in self.modules:
                 raise F90toRstException('Unknown module: %s'%block)
             block = self.modules[block]
@@ -1216,7 +1217,7 @@ def list_files(fortran_src, exts=['f', 'f90', 'f95'], absolute=True):
     # List the files using globs
     ffiles = []
     for fg in fortran_src:
-        if not isinstance(fg, basestring): continue
+        if not isinstance(fg, str): continue
         if os.path.isdir(fg):
             for ext in exts:
                 ffiles.extend(glob(os.path.join(fg,'*.'+ext)))
@@ -1286,8 +1287,8 @@ class FortranAutoModuleDirective(Directive):
         # Check module name
         module = self.arguments[0]
         if module not in f90torst.modules:
-#            print dir(self)
-            print 'Wrong fortran module name: '+module
+#            print(dir(self))
+            print('Wrong fortran module name: '+module)
             self.state_machine.reporter.warning('Wrong fortran module name: '+module, line=self.lineno)
 #            self.warn('Wrong fortran module name: '+module)
 
@@ -1352,11 +1353,11 @@ class FortranAutoObjectDirective(Directive):
 
         # Check object name
         objname = self.arguments[0].lower()
-        from fortran_domain import f_sep
+        from sphinxfortran.fortran_domain import f_sep
         if f_sep in objname: objname = objname.split(f_sep)[-1] # remove module name
         objects = getattr(f90torst, self._objtype+'s')
         if objname not in objects:
-            print self._warning%objname
+            print(self._warning%objname)
             self.state_machine.reporter.warning(self._warning%objname, line=self.lineno)
 #            self.warn(self._warning%objname)
 
@@ -1403,7 +1404,7 @@ class FortranAutoProgramDirective(Directive):
     optional_arguments = 0
 
     def run(self):
-        print 'test1'
+        print('test1')
         self.state_machine.reporter.warning('test2', line=self.lineno)
 
         # Get environment
@@ -1413,7 +1414,7 @@ class FortranAutoProgramDirective(Directive):
         # Check routine name
         program = self.arguments[0].lower()
         if program not in f90torst.programs:
-            print 'Wrong program name: '+program
+            print('Wrong program name: '+program)
             self.state_machine.reporter.warning('Wrong program name: '+program, line=self.lineno)
 #            self.warning('Wrong program name: '+program)
 
@@ -1451,7 +1452,7 @@ class FortranAutoSrcfileDirective(Directive):
         raw_text = f90torst.format_srcfile(srcfile, search_mode=search_mode, objtype=objtype)
         if not raw_text:
             msg = 'No valid content found for file: '+srcfile
-            print msg
+            print(msg)
             self.state_machine.reporter.warning(msg, line=self.lineno)
 #            self.warning('No valid content found for file: '+srcfile)
 
