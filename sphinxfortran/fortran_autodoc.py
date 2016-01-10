@@ -97,12 +97,7 @@ class F90toRst(object):
         self.src = {}
         self.ffiles = ffiles
         for ff in ffiles:
-            f = open(ff)
-            self.src[ff] = []
-            for l in f:
-                    self.src[ff].append(l[:-1]
-
-            f.close()
+            self.read_and_store(ff)
 
         # Crack files
         global verbose, quiet
@@ -127,6 +122,22 @@ class F90toRst(object):
         self._sst = sst
 
     # Indexing ---
+
+    def read_and_store(self, ffile, keyname=None):
+        if keyname is None: keyname = ffile
+        f = open(ffile)
+        if keyname not in self.src.keys():
+            self.src[keyname] = []
+        for l in f:
+            ls = l.strip().split()
+            if len(ls) > 0:
+                if ls[0] == 'include':
+                    dir = os.path.dirname(ffile)
+                    src = ls[1].strip('\'"')
+                    src = os.path.join(dir, src)
+                    self.read_and_store(src, keyname)
+            self.src[keyname].append(l[:-1])
+        f.close()
 
     def build_index(self):
         """Register modules, functions, types and module variables for quick access
